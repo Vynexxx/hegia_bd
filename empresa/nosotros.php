@@ -512,7 +512,7 @@
             <div class="row">
                 <div class="col-lg-4 col-md-6">
                     <div class="team-card">
-                        <div class="team-img" style="background-image: url('https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=774&q=80');"></div>
+                        <div class="team-img" style="background-image: url('../imagenes/León.jpg');"></div>
                         <div class="team-info">
                             <h4>Carlos Rodríguez</h4>
                             <p>Director General</p>

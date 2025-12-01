@@ -5,9 +5,11 @@ $pdo = new PDO('mysql:host=localhost;dbname=hegia_bd', 'root', '');
 // Obtener todas las categorías
 $categorias = $pdo->query("SELECT * FROM categorias ORDER BY nombre ASC")->fetchAll(PDO::FETCH_OBJ);
 
-// Verificar si se ha seleccionado una categoría
+// Verificar si se ha seleccionado una categoría o hay búsqueda
 $productos = [];
 $categoria_actual = null;
+$termino_busqueda = isset($_GET['buscar']) ? trim($_GET['buscar']) : '';
+
 if (isset($_GET['categoria_id'])) {
     $categoria_id = $_GET['categoria_id'];
     // Obtener productos de la categoría seleccionada
@@ -19,6 +21,14 @@ if (isset($_GET['categoria_id'])) {
     $stmt_cat = $pdo->prepare("SELECT * FROM categorias WHERE id_categoria = ?");
     $stmt_cat->execute([$categoria_id]);
     $categoria_actual = $stmt_cat->fetch(PDO::FETCH_OBJ);
+} elseif (!empty($termino_busqueda)) {
+    // Búsqueda por nombre
+    $stmt = $pdo->prepare("SELECT * FROM productos WHERE nombre LIKE ? ORDER BY nombre ASC");
+    $stmt->execute(["%$termino_busqueda%"]);
+    $productos = $stmt->fetchAll(PDO::FETCH_OBJ);
+} else {
+    // Mostrar todos los productos si no hay filtros
+    $productos = $pdo->query("SELECT * FROM productos ORDER BY nombre ASC")->fetchAll(PDO::FETCH_OBJ);
 }
 ?>
 
@@ -157,6 +167,65 @@ if (isset($_GET['categoria_id'])) {
             height: 4px;
             background: var(--primary-color);
             border-radius: 2px;
+        }
+
+        /* 🔍 NUEVO: Barra de búsqueda */
+        .search-container {
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-form {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .search-input {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 2px solid var(--primary-color);
+            color: white;
+            border-radius: 25px;
+            padding: 12px 20px;
+            font-size: 1.1rem;
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .search-input:focus {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-color: var(--accent-color);
+            color: white;
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+        }
+
+        .btn-search {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #16a085 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(26, 188, 156, 0.4);
+        }
+
+        /* 🔍 NUEVO: Indicador de búsqueda activa */
+        .search-active {
+            background: linear-gradient(135deg, var(--accent-color) 0%, #2980b9 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
         }
 
         /* Filtros de categorías */
@@ -431,11 +500,39 @@ if (isset($_GET['categoria_id'])) {
                 <h2>Productos Disponibles</h2>
             </div>
 
+            <!-- 🔍 NUEVO: Barra de búsqueda -->
+            <div class="search-container">
+                <form action="catalogo.php" method="get" class="search-form">
+                    <div class="input-group">
+                        <input type="text" name="buscar" class="form-control search-input" 
+                               placeholder="🔍 Buscar productos por nombre..." 
+                               value="<?php echo htmlspecialchars($termino_busqueda); ?>">
+                        <button type="submit" class="btn btn-search">
+                            <i class="fas fa-search me-2"></i>Buscar
+                        </button>
+                        <?php if (!empty($termino_busqueda)): ?>
+                            <a href="catalogo.php" class="btn btn-catalog ms-2">
+                                <i class="fas fa-times me-2"></i>Limpiar
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 🔍 NUEVO: Indicador de búsqueda activa -->
+            <?php if (!empty($termino_busqueda)): ?>
+                <div class="search-active">
+                    <i class="fas fa-search me-2"></i>
+                    <strong>Resultados de búsqueda:</strong> "<?php echo htmlspecialchars($termino_busqueda); ?>"
+                    <span class="badge bg-light text-dark ms-2"><?php echo count($productos); ?> productos encontrados</span>
+                </div>
+            <?php endif; ?>
+
             <!-- Filtros de categorías -->
             <div class="category-filters">
                 <h4 class="text-center mb-4">Filtrar por categoría</h4>
                 <div class="text-center">
-                    <a href="catalogo.php" class="btn category-btn <?php echo !isset($_GET['categoria_id']) ? 'active' : ''; ?>">
+                    <a href="catalogo.php" class="btn category-btn <?php echo (!isset($_GET['categoria_id']) && empty($termino_busqueda)) ? 'active' : ''; ?>">
                         <i class="fas fa-th-large me-2"></i>Todas las categorías
                     </a>
                     <?php foreach ($categorias as $categoria): ?>
@@ -482,11 +579,16 @@ if (isset($_GET['categoria_id'])) {
                 <div class="empty-state">
                     <i class="fas fa-box-open"></i>
                     <h3>No hay productos disponibles</h3>
-                    <p><?php echo $categoria_actual ? 
-                        "Actualmente no tenemos productos en la categoría '{$categoria_actual->nombre}'." : 
-                        "Selecciona una categoría para ver los productos disponibles."; ?>
+                    <p>
+                        <?php if (!empty($termino_busqueda)): ?>
+                            No se encontraron productos que coincidan con "<?php echo htmlspecialchars($termino_busqueda); ?>".
+                        <?php elseif ($categoria_actual): ?>
+                            Actualmente no tenemos productos en la categoría '<?php echo $categoria_actual->nombre; ?>'.
+                        <?php else: ?>
+                            Selecciona una categoría para ver los productos disponibles.
+                        <?php endif; ?>
                     </p>
-                    <?php if (!$categoria_actual): ?>
+                    <?php if (!$categoria_actual && empty($termino_busqueda)): ?>
                         <p class="mt-3">Utiliza los filtros de arriba para explorar nuestras categorías.</p>
                     <?php endif; ?>
                 </div>

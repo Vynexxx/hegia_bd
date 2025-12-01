@@ -21,7 +21,6 @@ if (isset($_REQUEST['action'])) {
             $prod->__SET('precio', $_REQUEST['precio']);
             $prod->__SET('stock', $_REQUEST['stock']);
             $prod->__SET('unidad_medida', $_REQUEST['unidad_medida']);
-            $prod->__SET('estado', $_REQUEST['estado']);
             $prod->__SET('id_categoria', $_REQUEST['id_categoria']);
 
             // Manejo de imagen
@@ -54,7 +53,6 @@ if (isset($_REQUEST['action'])) {
             $prod->__SET('precio', $_REQUEST['precio']);
             $prod->__SET('stock', $_REQUEST['stock']);
             $prod->__SET('unidad_medida', $_REQUEST['unidad_medida']);
-            $prod->__SET('estado', $_REQUEST['estado']);
             $prod->__SET('id_categoria', $_REQUEST['id_categoria']);
 
             // Imagen (mantiene la anterior si no se sube nueva)
@@ -381,17 +379,6 @@ if (isset($_REQUEST['action'])) {
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
-        /* Estado del producto */
-        .status-active {
-            color: #2ecc71;
-            font-weight: 600;
-        }
-
-        .status-inactive {
-            color: #e74c3c;
-            font-weight: 600;
-        }
-
         /* Responsive */
         @media (max-width: 768px) {
             .form-card, .table-card {
@@ -460,7 +447,7 @@ if (isset($_REQUEST['action'])) {
                             <?php
                             $pdo = new PDO('mysql:host=localhost;dbname=hegia_bd', 'root', '');
                             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-                            $stm = $pdo->prepare("SELECT * FROM categorias ORDER BY nombre ASC");
+                            $stm = $pdo->prepare("SELECT * FROM categorias WHERE EstadoRegistro = 1 ORDER BY nombre ASC");
                             $stm->execute();
                             $categorias = $stm->fetchAll(PDO::FETCH_OBJ);
 
@@ -479,33 +466,25 @@ if (isset($_REQUEST['action'])) {
                                   placeholder="Describa las características del producto"><?php echo $prod->__GET('descripcion'); ?></textarea>
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label class="form-label">Precio (S/)</label>
                         <input type="number" step="0.01" name="precio" class="form-control" 
                                value="<?php echo $prod->__GET('precio'); ?>" 
                                placeholder="0.00" required>
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label class="form-label">Stock</label>
                         <input type="number" name="stock" class="form-control" 
                                value="<?php echo $prod->__GET('stock'); ?>" 
                                placeholder="Cantidad" required>
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label class="form-label">Unidad de Medida</label>
                         <input type="text" name="unidad_medida" class="form-control" 
                                value="<?php echo $prod->__GET('unidad_medida'); ?>" 
                                placeholder="Ej: unidades, m², kg">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label">Estado</label>
-                        <select name="estado" class="form-select">
-                            <option value="Activo" <?php echo $prod->__GET('estado') == 'Activo' ? 'selected' : ''; ?>>Activo</option>
-                            <option value="Inactivo" <?php echo $prod->__GET('estado') == 'Inactivo' ? 'selected' : ''; ?>>Inactivo</option>
-                        </select>
                     </div>
 
                     <div class="col-md-6">
@@ -546,7 +525,6 @@ if (isset($_REQUEST['action'])) {
                                 <th>Stock</th>
                                 <th>Unidad</th>
                                 <th>Imagen</th>
-                                <th>Estado</th>
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
@@ -573,11 +551,6 @@ if (isset($_REQUEST['action'])) {
                                     <?php else: ?>
                                         <span class="text-muted">Sin imagen</span>
                                     <?php endif; ?>
-                                </td>
-                                <td>
-                                    <span class="<?php echo $r->estado == 'Activo' ? 'status-active' : 'status-inactive'; ?>">
-                                        <?php echo $r->estado; ?>
-                                    </span>
                                 </td>
                                 <td class="text-center">
                                     <div class="btn-group" role="group">

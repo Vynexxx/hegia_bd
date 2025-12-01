@@ -15,54 +15,41 @@ class ProductoModelo
         }
     }
 
-    // Listar todos los productos
+    // Listar todos los productos ACTIVOS
     public function Listar()
-{
-    try {
-        $stm = $this->pdo->prepare("
-            SELECT p.id_producto,
-                   p.nombre,
-                   p.descripcion,
-                   p.precio,
-                   p.stock,
-                   p.unidad_medida,
-                   p.imagen,
-                   p.estado,
-                   p.id_categoria,
-                   c.nombre AS categoria
-            FROM productos p
-            LEFT JOIN categorias c ON p.id_categoria = c.id_categoria
-            ORDER BY p.id_producto DESC
-        ");
-        $stm->execute();
+    {
+        try {
+            // CORREGIDO: Solo 10 parámetros (quitamos el último NULL)
+            $stm = $this->pdo->prepare("CALL PROC_MANTENIMIENTO_PRODUCTOS('listar', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)");
+            $stm->execute();
 
-        $result = array();
-        foreach ($stm->fetchAll(PDO::FETCH_OBJ) as $r) {
-            $p = new Producto();
-            $p->__SET('id_producto', $r->id_producto);
-            $p->__SET('nombre', $r->nombre);
-            $p->__SET('descripcion', $r->descripcion);
-            $p->__SET('precio', $r->precio);
-            $p->__SET('stock', $r->stock);
-            $p->__SET('unidad_medida', $r->unidad_medida);
-            $p->__SET('imagen', $r->imagen);
-            $p->__SET('estado', $r->estado);
-            $p->__SET('id_categoria', $r->id_categoria);
-            $p->categoria = $r->categoria;
-            $result[] = $p;
+            $result = array();
+            foreach ($stm->fetchAll(PDO::FETCH_OBJ) as $r) {
+                $p = new Producto();
+                $p->__SET('id_producto', $r->id_producto);
+                $p->__SET('nombre', $r->nombre);
+                $p->__SET('descripcion', $r->descripcion);
+                $p->__SET('precio', $r->precio);
+                $p->__SET('stock', $r->stock);
+                $p->__SET('unidad_medida', $r->unidad_medida);
+                $p->__SET('imagen', $r->imagen);
+                $p->__SET('id_categoria', $r->id_categoria);
+                $p->categoria = $r->categoria_nombre;
+                $result[] = $p;
+            }
+
+            return $result;
+        } catch (Exception $e) {
+            die($e->getMessage());
         }
-
-        return $result;
-    } catch (Exception $e) {
-        die($e->getMessage());
     }
-}
 
     // Obtener un producto específico
     public function Obtener($id)
     {
         try {
-            $stm = $this->pdo->prepare("SELECT * FROM productos WHERE id_producto = ?");
+            // Consulta directa para obtener producto específico
+            $stm = $this->pdo->prepare("SELECT * FROM productos WHERE id_producto = ? AND EstadoRegistro = 1");
             $stm->execute([$id]);
             $r = $stm->fetch(PDO::FETCH_OBJ);
 
@@ -76,7 +63,6 @@ class ProductoModelo
             $p->__SET('stock', $r->stock);
             $p->__SET('unidad_medida', $r->unidad_medida);
             $p->__SET('imagen', $r->imagen);
-            $p->__SET('estado', $r->estado);
             $p->__SET('id_categoria', $r->id_categoria);
 
             return $p;
@@ -89,8 +75,8 @@ class ProductoModelo
     public function Registrar(Producto $data)
     {
         try {
-            $sql = "INSERT INTO productos (nombre, descripcion, precio, stock, unidad_medida, imagen, estado, id_categoria)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            // CORREGIDO: Solo 9 parámetros + 'insertar' = 10 total
+            $sql = "CALL PROC_MANTENIMIENTO_PRODUCTOS('insertar', NULL, ?, ?, ?, ?, ?, ?, ?, 1)";
             $this->pdo->prepare($sql)->execute([
                 $data->__GET('nombre'),
                 $data->__GET('descripcion'),
@@ -98,7 +84,6 @@ class ProductoModelo
                 $data->__GET('stock'),
                 $data->__GET('unidad_medida'),
                 $data->__GET('imagen'),
-                $data->__GET('estado'),
                 $data->__GET('id_categoria')
             ]);
         } catch (Exception $e) {
@@ -112,35 +97,36 @@ class ProductoModelo
         try {
             // Si el usuario no sube nueva imagen, se conserva la anterior
             if ($data->__GET('imagen') == '' || $data->__GET('imagen') == null) {
-                $sql = "UPDATE productos SET 
-                        nombre = ?, descripcion = ?, precio = ?, stock = ?, 
-                        unidad_medida = ?, estado = ?, id_categoria = ?
-                        WHERE id_producto = ?";
+                // Primero obtenemos la imagen actual
+                $stm = $this->pdo->prepare("SELECT imagen FROM productos WHERE id_producto = ?");
+                $stm->execute([$data->__GET('id_producto')]);
+                $r = $stm->fetch(PDO::FETCH_OBJ);
+                $imagen_actual = $r ? $r->imagen : '';
+                
+                // CORREGIDO: Solo 9 parámetros + 'actualizar' = 10 total
+                $sql = "CALL PROC_MANTENIMIENTO_PRODUCTOS('actualizar', ?, ?, ?, ?, ?, ?, ?, ?, NULL)";
                 $this->pdo->prepare($sql)->execute([
+                    $data->__GET('id_producto'),
                     $data->__GET('nombre'),
                     $data->__GET('descripcion'),
                     $data->__GET('precio'),
                     $data->__GET('stock'),
                     $data->__GET('unidad_medida'),
-                    $data->__GET('estado'),
-                    $data->__GET('id_categoria'),
-                    $data->__GET('id_producto')
+                    $imagen_actual, // Mantener imagen actual
+                    $data->__GET('id_categoria')
                 ]);
             } else {
-                $sql = "UPDATE productos SET 
-                        nombre = ?, descripcion = ?, precio = ?, stock = ?, 
-                        unidad_medida = ?, imagen = ?, estado = ?, id_categoria = ?
-                        WHERE id_producto = ?";
+                // CORREGIDO: Solo 9 parámetros + 'actualizar' = 10 total
+                $sql = "CALL PROC_MANTENIMIENTO_PRODUCTOS('actualizar', ?, ?, ?, ?, ?, ?, ?, ?, NULL)";
                 $this->pdo->prepare($sql)->execute([
+                    $data->__GET('id_producto'),
                     $data->__GET('nombre'),
                     $data->__GET('descripcion'),
                     $data->__GET('precio'),
                     $data->__GET('stock'),
                     $data->__GET('unidad_medida'),
-                    $data->__GET('imagen'),
-                    $data->__GET('estado'),
-                    $data->__GET('id_categoria'),
-                    $data->__GET('id_producto')
+                    $data->__GET('imagen'), // Nueva imagen
+                    $data->__GET('id_categoria')
                 ]);
             }
         } catch (Exception $e) {
@@ -148,21 +134,42 @@ class ProductoModelo
         }
     }
 
-    // Eliminar producto (también borra la imagen del servidor)
+    // Eliminar producto (eliminación lógica - NO borra imagen)
     public function Eliminar($id)
     {
         try {
-            // Buscar imagen asociada para borrarla
-            $stm = $this->pdo->prepare("SELECT imagen FROM productos WHERE id_producto = ?");
+            // CORREGIDO: Solo 2 parámetros + 'eliminar' = 10 total (el resto NULL)
+            $stm = $this->pdo->prepare("CALL PROC_MANTENIMIENTO_PRODUCTOS('eliminar', ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)");
             $stm->execute([$id]);
-            $img = $stm->fetch(PDO::FETCH_OBJ);
+        } catch (Exception $e) {
+            die($e->getMessage());
+        }
+    }
 
-            if ($img && !empty($img->imagen) && file_exists('../imagenes/' . $img->imagen)) {
-                unlink('../imagenes/' . $img->imagen);
+    // 🔍 MÉTODO PARA BÚSQUEDA POR NOMBRE
+    public function BuscarPorNombre($nombre)
+    {
+        try {
+            // CORREGIDO: Solo 3 parámetros + 'buscar_nombre' = 10 total (el resto NULL)
+            $stm = $this->pdo->prepare("CALL PROC_MANTENIMIENTO_PRODUCTOS('buscar_nombre', NULL, ?, NULL, NULL, NULL, NULL, NULL, NULL, NULL)");
+            $stm->execute([$nombre]);
+
+            $result = array();
+            foreach ($stm->fetchAll(PDO::FETCH_OBJ) as $r) {
+                $p = new Producto();
+                $p->__SET('id_producto', $r->id_producto);
+                $p->__SET('nombre', $r->nombre);
+                $p->__SET('descripcion', $r->descripcion);
+                $p->__SET('precio', $r->precio);
+                $p->__SET('stock', $r->stock);
+                $p->__SET('unidad_medida', $r->unidad_medida);
+                $p->__SET('imagen', $r->imagen);
+                $p->__SET('id_categoria', $r->id_categoria);
+                $p->categoria = $r->categoria_nombre;
+                $result[] = $p;
             }
 
-            $stm = $this->pdo->prepare("DELETE FROM productos WHERE id_producto = ?");
-            $stm->execute([$id]);
+            return $result;
         } catch (Exception $e) {
             die($e->getMessage());
         }

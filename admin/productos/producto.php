@@ -8,7 +8,6 @@ class Producto
     private $stock;
     private $unidad_medida;
     private $imagen;
-    private $estado;
     private $id_categoria;
 
     public function __GET($prop)
